@@ -13,6 +13,7 @@ import Sobre from "./pages/Sobre";
 import Contato from "./pages/Contato";
 import Carrinho from "./pages/Carrinho";
 import MinhaConta from "./pages/MinhaConta";
+import GerenciarProdutos from "./pages/GerenciarProdutos";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/produtos" element={<Produtos />} />
+          <Route path="/gerenciar-produtos" element={<GerenciarProdutos />} />
           <Route path="/produto/:id" element={<DetalheProduto />} />
           <Route path="/categorias" element={<Categorias />} />
           <Route path="/sobre" element={<Sobre />} />

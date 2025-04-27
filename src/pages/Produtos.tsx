@@ -1,64 +1,45 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Produto {
+  id: string;
+  name: string;
+  price: number;
+  image_url: string;
+  description: string;
+}
 
 const Produtos = () => {
   const { toast } = useToast();
-  
-  // Dados de exemplo para produtos
-  const produtos = [
-    {
-      id: 1,
-      nome: "Bolo de Chocolate",
-      preco: 89.9,
-      imagem: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Y2hvY29sYXRlJTIwY2FrZXxlbnwwfHwwfHx8MA%3D%3D",
-      descricao: "Delicioso bolo de chocolate com ganache e cerejas"
-    },
-    {
-      id: 2,
-      nome: "Cheesecake",
-      preco: 79.9,
-      imagem: "https://images.unsplash.com/photo-1567171466295-4afa63d45416?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fGNoZWVzZWNha2V8ZW58MHx8MHx8fDA%3D",
-      descricao: "Cheesecake cremoso com calda de frutas vermelhas"
-    },
-    {
-      id: 3,
-      nome: "Bolo Red Velvet",
-      preco: 99.9,
-      imagem: "https://images.unsplash.com/photo-1586788224331-947f68671cf1?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8cmVkJTIwdmVsdmV0JTIwY2FrZXxlbnwwfHwwfHx8MA%3D%3D",
-      descricao: "Tradicional bolo Red Velvet com cobertura de cream cheese"
-    },
-    {
-      id: 4,
-      nome: "Torta de Limão",
-      preco: 69.9,
-      imagem: "https://images.unsplash.com/photo-1519915028121-7d3463d5b1ff?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8bGVtb24lMjBwaWV8ZW58MHx8MHx8fDA%3D",
-      descricao: "Refrescante torta de limão com merengue"
-    },
-    {
-      id: 5,
-      nome: "Cupcakes",
-      preco: 49.9,
-      imagem: "https://images.unsplash.com/photo-1599785209707-a456fc1337bb?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8Y3VwY2FrZXN8ZW58MHx8MHx8fDA%3D",
-      descricao: "Kit com 6 cupcakes decorados"
-    },
-    {
-      id: 6,
-      nome: "Bolo de Morango",
-      preco: 85.9,
-      imagem: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8c3RyYXdiZXJyeSUyMGNha2V8ZW58MHx8MHx8fDA%3D",
-      descricao: "Bolo recheado com creme e morangos frescos"
-    }
-  ];
+  const [produtos, setProdutos] = useState<Produto[]>([]);
 
-  const adicionarAoCarrinho = (produto) => {
+  useEffect(() => {
+    fetchProdutos();
+  }, []);
+
+  const fetchProdutos = async () => {
+    const { data, error } = await supabase.from('products').select('*');
+    if (error) {
+      toast({
+        title: "Erro ao carregar produtos",
+        description: error.message,
+        variant: "destructive"
+      });
+    } else {
+      setProdutos(data || []);
+    }
+  };
+
+  const adicionarAoCarrinho = (produto: Produto) => {
     toast({
       title: "Produto adicionado",
-      description: `${produto.nome} foi adicionado ao carrinho.`,
+      description: `${produto.name} foi adicionado ao carrinho.`,
     });
   };
 
@@ -74,23 +55,23 @@ const Produtos = () => {
                 <Link to={`/produto/${produto.id}`} className="block">
                   <div className="aspect-square overflow-hidden">
                     <img 
-                      src={produto.imagem} 
-                      alt={produto.nome} 
+                      src={produto.image_url} 
+                      alt={produto.name} 
                       className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
                     />
                   </div>
                 </Link>
                 <div className="p-4">
                   <Link to={`/produto/${produto.id}`} className="block">
-                    <h3 className="font-display text-lg font-medium mb-2">{produto.nome}</h3>
-                    <p className="text-muted-foreground text-sm mb-3">{produto.descricao}</p>
+                    <h3 className="font-display text-lg font-medium mb-2">{produto.name}</h3>
+                    <p className="text-muted-foreground text-sm mb-3">{produto.description}</p>
                   </Link>
                   <div className="flex justify-between items-center">
-                    <span className="font-medium text-cocoa-700">R$ {produto.preco.toFixed(2).replace('.', ',')}</span>
+                    <span className="font-medium text-cocoa-700">R$ {produto.price.toFixed(2).replace('.', ',')}</span>
                     <Button 
                       className="bg-cocoa-700 hover:bg-cocoa-800"
                       onClick={(e) => {
-                        e.preventDefault(); // Prevents navigation to product detail
+                        e.preventDefault();
                         adicionarAoCarrinho(produto);
                       }}
                     >
