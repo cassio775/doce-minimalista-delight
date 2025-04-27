@@ -1,27 +1,58 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createProduct, updateProduct, uploadProductImage, Product } from "@/services/productService";
 import { useToast } from "@/hooks/use-toast";
-import { ImagePlus, Trash2 } from 'lucide-react';
+import { ImagePlus, Trash2, Upload, AlertTriangle } from 'lucide-react';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 interface ProductFormProps {
   initialProduct?: Product;
   onSuccess: () => void;
 }
 
+const formSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
+  price: z.number().positive("Preço deve ser maior que zero"),
+  description: z.string().min(1, "Descrição é obrigatória"),
+  image_url: z.string().optional()
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
 const ProductForm = ({ initialProduct, onSuccess }: ProductFormProps) => {
-  const [productData, setProductData] = useState<Omit<Product, 'id'>>({
-    name: initialProduct?.name || '',
-    price: initialProduct?.price || 0,
-    description: initialProduct?.description || '',
-    image_url: initialProduct?.image_url || '',
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(initialProduct?.image_url || null);
   const { toast } = useToast();
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: initialProduct?.name || "",
+      price: initialProduct?.price || 0,
+      description: initialProduct?.description || "",
+      image_url: initialProduct?.image_url || ""
+    }
+  });
+
+  useEffect(() => {
+    if (initialProduct) {
+      form.reset({
+        name: initialProduct.name,
+        price: initialProduct.price,
+        description: initialProduct.description,
+        image_url: initialProduct.image_url || ""
+      });
+      setPreviewUrl(initialProduct.image_url || null);
+    }
+  }, [initialProduct, form]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -29,7 +60,7 @@ const ProductForm = ({ initialProduct, onSuccess }: ProductFormProps) => {
       setSelectedImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProductData(prev => ({ ...prev, image_url: reader.result as string }));
+        setPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -37,159 +68,203 @@ const ProductForm = ({ initialProduct, onSuccess }: ProductFormProps) => {
 
   const handleRemoveImage = () => {
     setSelectedImage(null);
-    setProductData(prev => ({ ...prev, image_url: '' }));
+    setPreviewUrl(null);
+    form.setValue("image_url", "");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const onSubmit = async (values: FormValues) => {
     try {
-      // Validate required fields
-      if (!productData.name || !productData.description || productData.price <= 0) {
-        toast({
-          title: "Erro de Validação",
-          description: "Por favor, preencha todos os campos obrigatórios corretamente.",
-          variant: "destructive"
-        });
-        return;
-      }
+      setIsSubmitting(true);
+      console.log("Dados do formulário antes do envio:", values);
       
-      let imageUrl = productData.image_url;
+      let imageUrl = values.image_url || "";
       
       if (selectedImage) {
-        imageUrl = await uploadProductImage(selectedImage);
+        console.log("Enviando imagem para upload...");
+        try {
+          imageUrl = await uploadProductImage(selectedImage);
+          console.log("URL da imagem após upload:", imageUrl);
+        } catch (error) {
+          console.error("Erro no upload da imagem:", error);
+          toast({
+            title: "Erro no upload da imagem",
+            description: String(error),
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          return;
+        }
       }
 
-      const finalProductData = {
-        ...productData,
-        image_url: imageUrl,
+      const productData = {
+        ...values,
+        image_url: imageUrl
       };
+      
+      console.log("Dados do produto a serem salvos:", productData);
 
       if (initialProduct?.id) {
-        await updateProduct(initialProduct.id, finalProductData);
-        toast({ title: "Produto atualizado com sucesso!" });
+        await updateProduct(initialProduct.id, productData);
+        toast({ 
+          title: "Produto atualizado com sucesso!",
+          variant: "default" 
+        });
       } else {
-        await createProduct(finalProductData);
-        toast({ title: "Produto criado com sucesso!" });
+        await createProduct(productData);
+        toast({ 
+          title: "Produto criado com sucesso!",
+          variant: "default" 
+        });
       }
 
-      // Reset form
-      setProductData({
-        name: '',
+      // Limpa o formulário
+      form.reset({
+        name: "",
         price: 0,
-        description: '',
-        image_url: '',
+        description: "",
+        image_url: ""
       });
       setSelectedImage(null);
+      setPreviewUrl(null);
 
-      // Call success callback
+      // Chama callback de sucesso
       onSuccess();
     } catch (error) {
+      console.error("Erro ao salvar produto:", error);
       toast({
         title: "Erro ao salvar produto",
         description: String(error),
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-cocoa-700">
+    <Card className="w-full shadow-lg border-cocoa-200">
+      <CardHeader className="bg-cocoa-50 border-b border-cocoa-100">
+        <CardTitle className="text-xl font-bold text-cocoa-800">
           {initialProduct?.id ? 'Editar Produto' : 'Novo Produto'}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-muted-foreground mb-2">Nome do Produto</label>
-            <Input
-              id="name"
-              value={productData.name}
-              onChange={(e) => setProductData({...productData, name: e.target.value})}
-              required
-              placeholder="Digite o nome do produto"
-              className="border-cocoa-200 focus:ring-cocoa-500"
+      <CardContent className="pt-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-cocoa-700">Nome do Produto</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Digite o nome do produto" 
+                      className="border-cocoa-200 focus-visible:ring-cocoa-500" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div>
-            <label htmlFor="price" className="block text-sm font-medium text-muted-foreground mb-2">Preço</label>
-            <Input
-              id="price"
-              type="number"
-              value={productData.price}
-              onChange={(e) => setProductData({...productData, price: parseFloat(e.target.value)})}
-              required
-              placeholder="Preço do produto"
-              step="0.01"
-              min="0"
-              className="border-cocoa-200 focus:ring-cocoa-500"
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-cocoa-700">Preço (R$)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      step="0.01"
+                      min="0"
+                      placeholder="0,00" 
+                      className="border-cocoa-200 focus-visible:ring-cocoa-500" 
+                      {...field} 
+                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-muted-foreground mb-2">Descrição</label>
-            <Textarea
-              id="description"
-              value={productData.description}
-              onChange={(e) => setProductData({...productData, description: e.target.value})}
-              required
-              placeholder="Descreva o produto"
-              rows={4}
-              className="border-cocoa-200 focus:ring-cocoa-500"
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-cocoa-700">Descrição</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Descreva o produto" 
+                      className="border-cocoa-200 focus-visible:ring-cocoa-500 min-h-[120px]" 
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-2">Imagem do Produto</label>
-            <div className="flex items-center gap-4">
-              <Input
-                id="image"
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <label 
-                htmlFor="image" 
-                className="flex items-center gap-2 px-4 py-2 border border-cocoa-300 rounded-md cursor-pointer hover:bg-cocoa-50 transition"
-              >
-                <ImagePlus size={20} className="text-cocoa-700" />
-                Selecionar Imagem
-              </label>
-              {(selectedImage || productData.image_url) && (
-                <Button 
-                  type="button" 
-                  variant="destructive" 
-                  size="icon" 
-                  onClick={handleRemoveImage}
-                  title="Remover Imagem"
+            <div className="space-y-3">
+              <FormLabel className="text-cocoa-700 block">Imagem do Produto</FormLabel>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                <label 
+                  htmlFor="image" 
+                  className="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-cocoa-100 hover:bg-cocoa-200 transition text-cocoa-800"
                 >
-                  <Trash2 size={16} />
-                </Button>
+                  <Upload size={18} className="text-cocoa-700" />
+                  Selecionar Imagem
+                </label>
+                {previewUrl && (
+                  <Button 
+                    type="button" 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={handleRemoveImage}
+                    title="Remover Imagem"
+                  >
+                    <Trash2 size={16} />
+                    <span className="ml-1">Remover</span>
+                  </Button>
+                )}
+              </div>
+              
+              {previewUrl ? (
+                <div className="mt-4 rounded-md overflow-hidden border border-cocoa-200">
+                  <img 
+                    src={previewUrl} 
+                    alt="Prévia da imagem" 
+                    className="w-full h-48 object-cover object-center"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-amber-600 mt-2">
+                  <AlertTriangle size={16} />
+                  <span className="text-sm">Imagem não selecionada</span>
+                </div>
               )}
             </div>
-            
-            {(selectedImage || productData.image_url) && (
-              <div className="mt-4">
-                <img 
-                  src={selectedImage ? URL.createObjectURL(selectedImage) : productData.image_url} 
-                  alt="Imagem do produto" 
-                  className="max-w-full h-40 object-cover rounded-md"
-                />
-              </div>
-            )}
-          </div>
 
-          <Button 
-            type="submit" 
-            className="w-full bg-cocoa-700 hover:bg-cocoa-800 transition"
-          >
-            {initialProduct?.id ? 'Atualizar Produto' : 'Cadastrar Produto'}
-          </Button>
-        </form>
+            <Button 
+              type="submit" 
+              className="w-full bg-cocoa-700 hover:bg-cocoa-800 transition"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Salvando..." : (initialProduct?.id ? 'Atualizar Produto' : 'Cadastrar Produto')}
+            </Button>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );
