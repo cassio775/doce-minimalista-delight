@@ -1,10 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import Layout from "@/components/layout/Layout";
-import { useToast } from "@/hooks/use-toast";
-import { fetchAllProducts, Product } from "@/services/productService";
 import ProductForm from "@/components/products/ProductForm";
 import ProductsTable from "@/components/products/ProductsTable";
+import { fetchAllProducts, Product } from "@/services/productService";
+import { useToast } from "@/hooks/use-toast";
 
 const GerenciarProdutos = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -15,10 +15,10 @@ const GerenciarProdutos = () => {
     try {
       const data = await fetchAllProducts();
       setProducts(data);
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Erro ao carregar produtos",
-        description: error.message,
+        description: String(error),
         variant: "destructive"
       });
     }
@@ -39,8 +39,7 @@ const GerenciarProdutos = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-6">Gerenciar Produtos</h1>
+      <div className="container mx-auto p-6 grid md:grid-cols-2 gap-6">
         <ProductForm 
           initialProduct={editingProduct} 
           onSuccess={handleProductSuccess}

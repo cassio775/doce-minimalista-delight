@@ -11,61 +11,62 @@ export interface Product {
   updated_at?: string;
 }
 
-// Função para buscar todos os produtos
 export const fetchAllProducts = async (): Promise<Product[]> => {
-  // Usando "any" para contornar a restrição de tipo
-  const { data, error } = await (supabase as any).from('products').select('*');
+  const { data, error } = await supabase
+    .from('products')
+    .select('*');
   
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
   
   return data || [];
 };
 
-// Função para buscar um produto por ID
 export const fetchProductById = async (id: string): Promise<Product | null> => {
-  const { data, error } = await (supabase as any).from('products').select('*').eq('id', id).maybeSingle();
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
   
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
   
   return data;
 };
 
-// Função para criar um produto
 export const createProduct = async (product: Omit<Product, 'id'>): Promise<Product> => {
-  const { data, error } = await (supabase as any).from('products').insert(product).select().single();
+  const { data, error } = await supabase
+    .from('products')
+    .insert(product)
+    .select()
+    .single();
   
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
   
   return data;
 };
 
-// Função para atualizar um produto
 export const updateProduct = async (id: string, product: Partial<Omit<Product, 'id'>>): Promise<Product> => {
-  const { data, error } = await (supabase as any).from('products').update(product).eq('id', id).select().single();
+  const { data, error } = await supabase
+    .from('products')
+    .update(product)
+    .eq('id', id)
+    .select()
+    .single();
   
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
   
   return data;
 };
 
-// Função para deletar um produto
 export const deleteProduct = async (id: string): Promise<void> => {
-  const { error } = await (supabase as any).from('products').delete().eq('id', id);
+  const { error } = await supabase
+    .from('products')
+    .delete()
+    .eq('id', id);
   
-  if (error) {
-    throw error;
-  }
+  if (error) throw error;
 };
 
-// Função para fazer upload de uma imagem de produto
 export const uploadProductImage = async (file: File): Promise<string> => {
   const fileExt = file.name.split('.').pop();
   const fileName = `${Math.random()}.${fileExt}`;
