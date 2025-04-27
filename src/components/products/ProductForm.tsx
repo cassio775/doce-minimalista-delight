@@ -1,30 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createProduct, updateProduct, uploadProductImage, Product } from "@/services/productService";
 import { useToast } from "@/hooks/use-toast";
-import { ImagePlus, Trash2, Upload, AlertTriangle } from 'lucide-react';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ImageUpload } from "./form/ImageUpload";
+import { ProductFormFields, formSchema, FormValues } from "./form/ProductFormFields";
 
 interface ProductFormProps {
   initialProduct?: Product;
   onSuccess: () => void;
 }
-
-const formSchema = z.object({
-  name: z.string().min(1, "Nome é obrigatório"),
-  price: z.number().positive("Preço deve ser maior que zero"),
-  description: z.string().min(1, "Descrição é obrigatória"),
-  image_url: z.string().optional()
-});
-
-type FormValues = z.infer<typeof formSchema>;
 
 const ProductForm = ({ initialProduct, onSuccess }: ProductFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,7 +85,6 @@ const ProductForm = ({ initialProduct, onSuccess }: ProductFormProps) => {
         }
       }
 
-      // Fix for the TypeScript error - ensure all required properties are present
       const productData: Omit<Product, 'id'> = {
         name: values.name,
         price: values.price,
@@ -120,7 +108,6 @@ const ProductForm = ({ initialProduct, onSuccess }: ProductFormProps) => {
         });
       }
 
-      // Limpa o formulário
       form.reset({
         name: "",
         price: 0,
@@ -129,8 +116,6 @@ const ProductForm = ({ initialProduct, onSuccess }: ProductFormProps) => {
       });
       setSelectedImage(null);
       setPreviewUrl(null);
-
-      // Chama callback de sucesso
       onSuccess();
     } catch (error) {
       console.error("Erro ao salvar produto:", error);
@@ -154,111 +139,12 @@ const ProductForm = ({ initialProduct, onSuccess }: ProductFormProps) => {
       <CardContent className="pt-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-cocoa-700">Nome do Produto</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Digite o nome do produto" 
-                      className="border-cocoa-200 focus-visible:ring-cocoa-500" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+            <ProductFormFields form={form} />
+            <ImageUpload 
+              previewUrl={previewUrl}
+              onImageUpload={handleImageUpload}
+              onRemoveImage={handleRemoveImage}
             />
-
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-cocoa-700">Preço (R$)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      step="0.01"
-                      min="0"
-                      placeholder="0,00" 
-                      className="border-cocoa-200 focus-visible:ring-cocoa-500" 
-                      {...field} 
-                      onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-cocoa-700">Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Descreva o produto" 
-                      className="border-cocoa-200 focus-visible:ring-cocoa-500 min-h-[120px]" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="space-y-3">
-              <FormLabel className="text-cocoa-700 block">Imagem do Produto</FormLabel>
-              <div className="flex items-center gap-3">
-                <Input
-                  id="image"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-                <label 
-                  htmlFor="image" 
-                  className="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-cocoa-100 hover:bg-cocoa-200 transition text-cocoa-800"
-                >
-                  <Upload size={18} className="text-cocoa-700" />
-                  Selecionar Imagem
-                </label>
-                {previewUrl && (
-                  <Button 
-                    type="button" 
-                    variant="destructive" 
-                    size="sm" 
-                    onClick={handleRemoveImage}
-                    title="Remover Imagem"
-                  >
-                    <Trash2 size={16} />
-                    <span className="ml-1">Remover</span>
-                  </Button>
-                )}
-              </div>
-              
-              {previewUrl ? (
-                <div className="mt-4 rounded-md overflow-hidden border border-cocoa-200">
-                  <img 
-                    src={previewUrl} 
-                    alt="Prévia da imagem" 
-                    className="w-full h-48 object-cover object-center"
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-amber-600 mt-2">
-                  <AlertTriangle size={16} />
-                  <span className="text-sm">Imagem não selecionada</span>
-                </div>
-              )}
-            </div>
-
             <Button 
               type="submit" 
               className="w-full bg-cocoa-700 hover:bg-cocoa-800 transition"
