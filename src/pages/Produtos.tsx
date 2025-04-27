@@ -3,8 +3,12 @@ import React from "react";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { ShoppingCart } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Produtos = () => {
+  const { toast } = useToast();
+  
   // Dados de exemplo para produtos
   const produtos = [
     {
@@ -51,6 +55,13 @@ const Produtos = () => {
     }
   ];
 
+  const adicionarAoCarrinho = (produto) => {
+    toast({
+      title: "Produto adicionado",
+      description: `${produto.nome} foi adicionado ao carrinho.`,
+    });
+  };
+
   return (
     <Layout>
       <div className="section-padding">
@@ -60,20 +71,30 @@ const Produtos = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {produtos.map((produto) => (
               <div key={produto.id} className="rounded-lg overflow-hidden border border-cream-200 hover:shadow-md transition-shadow">
-                <div className="aspect-square overflow-hidden">
-                  <img 
-                    src={produto.imagem} 
-                    alt={produto.nome} 
-                    className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
-                  />
-                </div>
+                <Link to={`/produto/${produto.id}`} className="block">
+                  <div className="aspect-square overflow-hidden">
+                    <img 
+                      src={produto.imagem} 
+                      alt={produto.nome} 
+                      className="w-full h-full object-cover transition-transform hover:scale-105 duration-300"
+                    />
+                  </div>
+                </Link>
                 <div className="p-4">
-                  <h3 className="font-display text-lg font-medium mb-2">{produto.nome}</h3>
-                  <p className="text-muted-foreground text-sm mb-3">{produto.descricao}</p>
+                  <Link to={`/produto/${produto.id}`} className="block">
+                    <h3 className="font-display text-lg font-medium mb-2">{produto.nome}</h3>
+                    <p className="text-muted-foreground text-sm mb-3">{produto.descricao}</p>
+                  </Link>
                   <div className="flex justify-between items-center">
-                    <span className="font-medium text-cocoa-700">R$ {produto.preco.toFixed(2)}</span>
-                    <Button className="bg-cocoa-700 hover:bg-cocoa-800">
-                      Adicionar ao Carrinho
+                    <span className="font-medium text-cocoa-700">R$ {produto.preco.toFixed(2).replace('.', ',')}</span>
+                    <Button 
+                      className="bg-cocoa-700 hover:bg-cocoa-800"
+                      onClick={(e) => {
+                        e.preventDefault(); // Prevents navigation to product detail
+                        adicionarAoCarrinho(produto);
+                      }}
+                    >
+                      <ShoppingCart size={18} className="mr-1" /> Adicionar
                     </Button>
                   </div>
                 </div>
