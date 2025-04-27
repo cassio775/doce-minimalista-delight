@@ -96,8 +96,11 @@ const ProductForm = ({ initialProduct, onSuccess }: ProductFormProps) => {
         }
       }
 
-      const productData = {
-        ...values,
+      // Fix for the TypeScript error - ensure all required properties are present
+      const productData: Omit<Product, 'id'> = {
+        name: values.name,
+        price: values.price,
+        description: values.description,
         image_url: imageUrl
       };
       
