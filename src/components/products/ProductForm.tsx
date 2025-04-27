@@ -17,6 +17,7 @@ interface ProductFormProps {
 
 const ProductForm = ({ initialProduct, onSuccess }: ProductFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(initialProduct?.image_url || null);
   const { toast } = useToast();
@@ -69,11 +70,14 @@ const ProductForm = ({ initialProduct, onSuccess }: ProductFormProps) => {
       let imageUrl = values.image_url || "";
       
       if (selectedImage) {
-        console.log("Enviando imagem para upload...");
         try {
+          console.log("Enviando imagem para upload...");
+          setIsUploading(true);
           imageUrl = await uploadProductImage(selectedImage);
           console.log("URL da imagem após upload:", imageUrl);
+          setIsUploading(false);
         } catch (error) {
+          setIsUploading(false);
           console.error("Erro no upload da imagem:", error);
           toast({
             title: "Erro no upload da imagem",
@@ -144,11 +148,12 @@ const ProductForm = ({ initialProduct, onSuccess }: ProductFormProps) => {
               previewUrl={previewUrl}
               onImageUpload={handleImageUpload}
               onRemoveImage={handleRemoveImage}
+              isUploading={isUploading}
             />
             <Button 
               type="submit" 
               className="w-full bg-cocoa-700 hover:bg-cocoa-800 transition"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploading}
             >
               {isSubmitting ? "Salvando..." : (initialProduct?.id ? 'Atualizar Produto' : 'Cadastrar Produto')}
             </Button>

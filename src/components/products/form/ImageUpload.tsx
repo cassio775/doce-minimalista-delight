@@ -2,16 +2,17 @@
 import React from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Upload, Trash2, AlertTriangle } from 'lucide-react';
+import { Upload, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { FormLabel } from "@/components/ui/form";
 
 interface ImageUploadProps {
   previewUrl: string | null;
   onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveImage: () => void;
+  isUploading?: boolean;
 }
 
-export const ImageUpload = ({ previewUrl, onImageUpload, onRemoveImage }: ImageUploadProps) => {
+export const ImageUpload = ({ previewUrl, onImageUpload, onRemoveImage, isUploading = false }: ImageUploadProps) => {
   return (
     <div className="space-y-3">
       <FormLabel className="text-cocoa-700 block">Imagem do Produto</FormLabel>
@@ -22,13 +23,18 @@ export const ImageUpload = ({ previewUrl, onImageUpload, onRemoveImage }: ImageU
           accept="image/*"
           onChange={onImageUpload}
           className="hidden"
+          disabled={isUploading}
         />
         <label 
           htmlFor="image" 
-          className="flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-cocoa-100 hover:bg-cocoa-200 transition text-cocoa-800"
+          className={`flex items-center gap-2 px-4 py-2 rounded-md cursor-pointer bg-cocoa-100 hover:bg-cocoa-200 transition text-cocoa-800 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          <Upload size={18} className="text-cocoa-700" />
-          Selecionar Imagem
+          {isUploading ? (
+            <Loader2 size={18} className="text-cocoa-700 animate-spin" />
+          ) : (
+            <Upload size={18} className="text-cocoa-700" />
+          )}
+          {isUploading ? 'Enviando...' : 'Selecionar Imagem'}
         </label>
         {previewUrl && (
           <Button 
@@ -37,6 +43,7 @@ export const ImageUpload = ({ previewUrl, onImageUpload, onRemoveImage }: ImageU
             size="sm" 
             onClick={onRemoveImage}
             title="Remover Imagem"
+            disabled={isUploading}
           >
             <Trash2 size={16} />
             <span className="ml-1">Remover</span>

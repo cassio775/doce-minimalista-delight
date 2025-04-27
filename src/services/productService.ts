@@ -100,37 +100,16 @@ export const uploadProductImage = async (file: File): Promise<string> => {
   }
   
   const fileExt = file.name.split('.').pop();
-  const fileName = `${Math.random()}.${fileExt}`;
-  const filePath = `products/${fileName}`;
+  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+  const filePath = `${fileName}`;
 
-  // Verificando se o bucket existe antes de tentar o upload
-  const { data: bucketData, error: bucketError } = await supabase.storage
-    .getBucket('products');
-  
-  if (bucketError && bucketError.message.includes('does not exist')) {
-    // Bucket não existe, vamos criar
-    console.log("Bucket 'products' não existe. Tentando criar...");
-    const { error: createError } = await supabase.storage
-      .createBucket('products', {
-        public: true,
-        allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
-        fileSizeLimit: 5242880 // 5MB
-      });
-      
-    if (createError) {
-      console.error("Erro ao criar bucket 'products':", createError);
-      throw createError;
-    }
-    console.log("Bucket 'products' criado com sucesso");
-  } else if (bucketError) {
-    console.error("Erro ao verificar bucket:", bucketError);
-    throw bucketError;
-  }
-
-  // Fazendo upload do arquivo
+  // Fazendo upload do arquivo diretamente sem verificar se o bucket existe
   const { error: uploadError } = await supabase.storage
     .from('products')
-    .upload(filePath, file);
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
 
   if (uploadError) {
     console.error("Erro no upload da imagem:", uploadError);
