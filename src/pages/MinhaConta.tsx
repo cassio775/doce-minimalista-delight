@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Package, User, LogOut, MapPin } from "lucide-react";
+import { Link as RouterLink } from "react-router-dom";
 
 const MinhaConta = () => {
   const { toast } = useToast();
@@ -186,11 +187,11 @@ const MinhaConta = () => {
                 {pedidos.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4">Você ainda não realizou nenhum pedido.</p>
-                    <Link to="/produtos">
+                    <RouterLink to="/produtos">
                       <Button className="bg-cocoa-700 hover:bg-cocoa-800">
                         Ver Produtos
                       </Button>
-                    </Link>
+                    </RouterLink>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -270,11 +271,5 @@ const MinhaConta = () => {
   );
 };
 
-const Link = React.forwardRef<
-  HTMLAnchorElement,
-  React.AnchorHTMLAttributes<HTMLAnchorElement>
->(({ href, ...props }, ref) => {
-  return <a ref={ref} href={href} {...props} />;
-});
-
+// No custom Link component needed anymore as we're using RouterLink directly
 export default MinhaConta;
