@@ -3,23 +3,22 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Upload, Trash2, Edit } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import Layout from '@/components/layout/Layout';
-
-interface Product {
-  id?: string;
-  name: string;
-  price: number;
-  description: string;
-  image_url?: string;
-}
+import { 
+  fetchAllProducts, 
+  createProduct, 
+  updateProduct, 
+  deleteProduct, 
+  uploadProductImage,
+  Product 
+} from '@/services/productService';
 
 const GerenciarProdutos = () => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [currentProduct, setCurrentProduct] = useState<Product>({
+  const [currentProduct, setCurrentProduct] = useState<Partial<Product>>({
     name: '',
     price: 0,
     description: ''
@@ -28,19 +27,19 @@ const GerenciarProdutos = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchProducts();
+    loadProducts();
   }, []);
 
-  const fetchProducts = async () => {
-    const { data, error } = await supabase.from('products').select('*');
-    if (error) {
+  const loadProducts = async () => {
+    try {
+      const data = await fetchAllProducts();
+      setProducts(data);
+    } catch (error: any) {
       toast({
         title: "Erro ao carregar produtos",
         description: error.message,
         variant: "destructive"
       });
-    } else {
-      setProducts(data || []);
     }
   };
 
@@ -51,79 +50,57 @@ const GerenciarProdutos = () => {
     }
   };
 
-  const uploadImage = async (file: File) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('products')
-      .upload(filePath, file);
-
-    if (uploadError) {
-      toast({
-        title: "Erro no upload da imagem",
-        description: uploadError.message,
-        variant: "destructive"
-      });
-      return null;
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('products')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    let imageUrl = currentProduct.image_url;
-    if (selectedImage) {
-      imageUrl = await uploadImage(selectedImage);
-    }
+    try {
+      let imageUrl = currentProduct.image_url;
+      if (selectedImage) {
+        imageUrl = await uploadProductImage(selectedImage);
+      }
 
-    const productData = {
-      ...currentProduct,
-      image_url: imageUrl
-    };
+      const productData = {
+        name: currentProduct.name || '',
+        price: currentProduct.price || 0,
+        description: currentProduct.description || '',
+        image_url: imageUrl || ''
+      };
 
-    const { error } = currentProduct.id
-      ? await supabase
-          .from('products')
-          .update(productData)
-          .eq('id', currentProduct.id)
-      : await supabase.from('products').insert(productData);
+      if (currentProduct.id) {
+        await updateProduct(currentProduct.id, productData);
+        toast({
+          title: "Produto atualizado com sucesso"
+        });
+      } else {
+        await createProduct(productData);
+        toast({
+          title: "Produto criado com sucesso"
+        });
+      }
 
-    if (error) {
+      loadProducts();
+      setCurrentProduct({ name: '', price: 0, description: '' });
+      setSelectedImage(null);
+    } catch (error: any) {
       toast({
         title: "Erro ao salvar produto",
         description: error.message,
         variant: "destructive"
       });
-    } else {
-      toast({
-        title: "Produto salvo com sucesso",
-        description: currentProduct.id ? "Produto atualizado" : "Novo produto criado"
-      });
-      fetchProducts();
-      setCurrentProduct({ name: '', price: 0, description: '' });
-      setSelectedImage(null);
     }
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from('products').delete().eq('id', id);
-    if (error) {
+    try {
+      await deleteProduct(id);
+      toast({ title: "Produto excluído com sucesso" });
+      loadProducts();
+    } catch (error: any) {
       toast({
         title: "Erro ao excluir produto",
         description: error.message,
         variant: "destructive"
       });
-    } else {
-      toast({ title: "Produto excluído com sucesso" });
-      fetchProducts();
     }
   };
 
@@ -139,21 +116,21 @@ const GerenciarProdutos = () => {
         <form onSubmit={handleSubmit} className="mb-6 grid gap-4">
           <Input
             placeholder="Nome do Produto"
-            value={currentProduct.name}
+            value={currentProduct.name || ''}
             onChange={(e) => setCurrentProduct({...currentProduct, name: e.target.value})}
             required
           />
           <Input
             type="number"
             placeholder="Preço"
-            value={currentProduct.price}
+            value={currentProduct.price || 0}
             onChange={(e) => setCurrentProduct({...currentProduct, price: parseFloat(e.target.value)})}
             step="0.01"
             required
           />
           <Textarea
             placeholder="Descrição"
-            value={currentProduct.description}
+            value={currentProduct.description || ''}
             onChange={(e) => setCurrentProduct({...currentProduct, description: e.target.value})}
             required
           />
@@ -164,6 +141,16 @@ const GerenciarProdutos = () => {
               onChange={handleImageUpload}
             />
             {selectedImage && <p>Imagem selecionada: {selectedImage.name}</p>}
+            {currentProduct.image_url && !selectedImage && (
+              <div className="mt-2">
+                <p>Imagem atual:</p>
+                <img 
+                  src={currentProduct.image_url} 
+                  alt="Imagem atual" 
+                  className="w-40 h-40 object-cover mt-1"
+                />
+              </div>
+            )}
           </div>
           <Button type="submit">{currentProduct.id ? 'Atualizar' : 'Adicionar'} Produto</Button>
         </form>
@@ -195,7 +182,7 @@ const GerenciarProdutos = () => {
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      onClick={() => handleDelete(product.id!)}
+                      onClick={() => handleDelete(product.id)}
                     >
                       <Trash2 size={16} />
                     </Button>

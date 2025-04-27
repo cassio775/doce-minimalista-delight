@@ -5,47 +5,34 @@ import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
-
-interface Produto {
-  id: string;
-  name: string;
-  price: number;
-  image_url: string;
-  description: string;
-}
+import { fetchProductById, Product } from "@/services/productService";
 
 const DetalheProduto = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const [produto, setProduto] = useState<Produto | null>(null);
+  const [produto, setProduto] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProduto();
+    if (id) {
+      loadProduto(id);
+    }
   }, [id]);
 
-  const fetchProduto = async () => {
+  const loadProduto = async (productId: string) => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
-
-    if (error) {
+    try {
+      const data = await fetchProductById(productId);
+      setProduto(data);
+    } catch (error: any) {
       toast({
         title: "Erro ao carregar produto",
         description: error.message,
         variant: "destructive"
       });
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setProduto(data);
-    setLoading(false);
   };
 
   const adicionarAoCarrinho = () => {

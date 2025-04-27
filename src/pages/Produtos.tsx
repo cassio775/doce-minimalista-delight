@@ -5,38 +5,30 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-
-interface Produto {
-  id: string;
-  name: string;
-  price: number;
-  image_url: string;
-  description: string;
-}
+import { fetchAllProducts, Product } from "@/services/productService";
 
 const Produtos = () => {
   const { toast } = useToast();
-  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [produtos, setProdutos] = useState<Product[]>([]);
 
   useEffect(() => {
-    fetchProdutos();
+    loadProdutos();
   }, []);
 
-  const fetchProdutos = async () => {
-    const { data, error } = await supabase.from('products').select('*');
-    if (error) {
+  const loadProdutos = async () => {
+    try {
+      const data = await fetchAllProducts();
+      setProdutos(data);
+    } catch (error: any) {
       toast({
         title: "Erro ao carregar produtos",
         description: error.message,
         variant: "destructive"
       });
-    } else {
-      setProdutos(data || []);
     }
   };
 
-  const adicionarAoCarrinho = (produto: Produto) => {
+  const adicionarAoCarrinho = (produto: Product) => {
     toast({
       title: "Produto adicionado",
       description: `${produto.name} foi adicionado ao carrinho.`,
