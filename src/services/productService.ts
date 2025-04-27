@@ -2,11 +2,11 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Product {
-  id: string;
+  id?: string;
   name: string;
   price: number;
   description: string;
-  image_url: string;
+  image_url?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -70,7 +70,7 @@ export const deleteProduct = async (id: string): Promise<void> => {
 export const uploadProductImage = async (file: File): Promise<string> => {
   const fileExt = file.name.split('.').pop();
   const fileName = `${Math.random()}.${fileExt}`;
-  const filePath = `${fileName}`;
+  const filePath = `products/${fileName}`;
 
   const { error: uploadError } = await supabase.storage
     .from('products')
